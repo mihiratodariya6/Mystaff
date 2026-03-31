@@ -1,261 +1,146 @@
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; 
-import 'dart:io'; 
-import 'boss_dashboard_screen.dart'; // 👈 Dashboard link kari didhu
+import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:firebase_auth/firebase_auth.dart'; 
+import 'boss_dashboard_screen.dart';
 
 class BossSetupScreen extends StatefulWidget {
-  final String userPhone;
-  const BossSetupScreen({super.key, this.userPhone = "+91 99242 47523"});
+  const BossSetupScreen({super.key});
 
   @override
   State<BossSetupScreen> createState() => _BossSetupScreenState();
 }
 
 class _BossSetupScreenState extends State<BossSetupScreen> {
-  File? _image; 
-  final picker = ImagePicker();
+  int _currentStep = 0;
+  bool isSaving = false; 
 
-  // Controllers
-  final ownerNameController = TextEditingController();
-  final companyNameController = TextEditingController();
-  final emailController = TextEditingController();
-  final addressController = TextEditingController();
-  final cityController = TextEditingController();
-  final gstController = TextEditingController(); 
-  final panController = TextEditingController(); 
-  final websiteController = TextEditingController(); 
-  
-  String businessType = 'Office';
-  String totalEmployees = '1-10';
-  bool isLoading = false;
+  final TextEditingController companyNameController = TextEditingController();
+  final TextEditingController gstController = TextEditingController(); // 👈 GST માટે
+  String selectedBusinessType = 'IT / Tech';
+  String selectedCompanySize = '1-10 Employees';
 
-  // 📸 Logo Selection
-  Future<void> _pickImage() async {
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    setState(() {
-      if (pickedFile != null) _image = File(pickedFile.path);
-    });
+  final TextEditingController addressController = TextEditingController();
+  final TextEditingController cityController = TextEditingController();
+
+  String selectedTiming = '09:00 AM - 06:00 PM';
+  String selectedDays = 'Mon - Sat';
+
+  String generateCompanyCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    final random = Random();
+    String prefix = String.fromCharCodes(Iterable.generate(3, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
+    String suffix = (random.nextInt(9000) + 1000).toString();
+    return '$prefix-$suffix';
   }
 
-  // 🔍 PAN Validation (5 Letters + 4 Digits + 1 Letter)
-  bool isValidPAN(String pan) {
-    RegExp panRegex = RegExp(r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$');
-    return panRegex.hasMatch(pan.toUpperCase());
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("❌ $msg"), backgroundColor: Colors.red));
   }
 
-  // 🔍 GST Verification & Auto-fill Logic
-  void verifyGST() async {
-    String gst = gstController.text.trim();
-    if (gst.length != 15) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bapu, GST number 15 akda no hoy!"), backgroundColor: Colors.red),
-      );
-      return;
+  void _finishSetup() async { 
+    String compName = companyNameController.text.trim();
+    String gst = gstController.text.trim().toUpperCase();
+
+    if (compName.isEmpty) {
+      _showError("Company Name is required!"); return;
     }
 
-    setState(() { isLoading = true; });
-    await Future.delayed(const Duration(seconds: 2)); // ⏳ Dummy API
-    
-    setState(() {
-      isLoading = false;
-      companyNameController.text = "Mihir Enterprises Pvt Ltd";
-      addressController.text = "402, Business Hub, Ring Road";
-      cityController.text = "Surat, Gujarat";
-      panController.text = gst.substring(2, 12).toUpperCase();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("GST Verified & Details Auto-filled! ✅"), backgroundColor: Colors.green),
-    );
-  }
-
-  // 🚀 Final Registration Logic
-  void handleCreateCompany() async {
-    String pan = panController.text.trim();
-
-    if (pan.isNotEmpty && !isValidPAN(pan)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("PAN Format Invalid! (Ex: ABCDE1234F)"), backgroundColor: Colors.red),
-      );
-      return;
+    // 🛡️ GST કડક ચેકિંગ (15 Characters Exact Format)
+    if (gst.isNotEmpty) {
+      // GST Format: 22AAAAA0000A1Z5
+      if (!RegExp(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$').hasMatch(gst)) {
+        _showError("Invalid GST Number! Format should be 22ABCDE1234F1Z5"); return;
+      }
     }
 
-    if (ownerNameController.text.isEmpty || companyNameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Owner & Company Name are required!")));
-      return;
-    }
+    setState(() => isSaving = true);
 
-    setState(() { isLoading = true; });
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() { isLoading = false; });
+    String newCode = generateCompanyCode();
+    String uid = FirebaseAuth.instance.currentUser!.uid; 
 
-    String generatedId = "MS-${companyNameController.text.substring(0,2).toUpperCase()}${DateTime.now().millisecond}";
+    try {
+      await FirebaseFirestore.instance.collection('companies').doc(newCode).set({
+        'bossId': uid,
+        'companyCode': newCode,
+        'companyName': compName,
+        'gstNumber': gst, // 👈 GST સેવ થશે
+        'businessType': selectedBusinessType,
+        'companySize': selectedCompanySize,
+        'address': addressController.text.trim(),
+        'city': cityController.text.trim(),
+        'workingDays': selectedDays,
+        'timings': selectedTiming,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    if (!mounted) return;
-    
-    // 🎊 Success Pop-up with Dashboard Navigation
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Center(child: Text("Registration Success! 🎊")),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 60),
-            const SizedBox(height: 10),
-            Text("Admin Role Assigned for ${companyNameController.text}"),
-            const SizedBox(height: 10),
-            const Text("Your Company ID:", style: TextStyle(fontSize: 12, color: Colors.grey)),
-            Text(generatedId, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1565C0))),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Pop-up bandh
-                
-                // 👇 SIDHU DASHBOARD PAR (Pacha na aavi shakay)
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BossDashboardScreen(
-                      companyName: companyNameController.text,
-                      companyId: generatedId,
-                    ),
-                  ),
-                  (route) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-              child: const Text("Go to Dashboard", style: TextStyle(color: Colors.white)),
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_role', 'boss');
+      await prefs.setString('company_code', newCode);
+
+      setState(() => isSaving = false);
+
+      if (mounted) {
+        showDialog(
+          context: context, barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Column(children: [Icon(Icons.check_circle, color: Colors.green, size: 60), SizedBox(height: 10), Text("Setup Complete! 🎉", style: TextStyle(fontWeight: FontWeight.bold))]),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Share this code with your employees to join your workspace:", textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF1565C0))), child: Text(newCode, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2.0, color: Color(0xFF1565C0)))),
+              ],
             ),
+            actions: [
+              SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {Navigator.pop(context); Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => BossDashboardScreen(companyName: compName, companyId: newCode)));}, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), child: const Text("Go to Dashboard", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))))
+            ],
           ),
-        ],
-      ),
-    );
+        );
+      }
+    } catch (e) {
+      setState(() => isSaving = false);
+      _showError("Error: ${e.toString()}");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text("Boss Profile Setup", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white, elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            // 📸 LOGO
-            Center(
-              child: GestureDetector(
-                onTap: _pickImage, 
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 110, height: 110,
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50, shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF1565C0), width: 2),
-                        image: _image != null ? DecorationImage(image: FileImage(_image!), fit: BoxFit.cover) : null,
-                      ),
-                      child: _image == null ? const Icon(Icons.business, size: 50, color: Color(0xFF1565C0)) : null,
-                    ),
-                    Positioned(bottom: 0, right: 0, child: Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: Color(0xFF1565C0), shape: BoxShape.circle), child: const Icon(Icons.camera_alt, color: Colors.white, size: 18))),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            _buildSectionTitle("👤 Owner Details"),
-            _buildTextField(ownerNameController, "Owner Full Name", Icons.person_outline),
-            _buildTextField(null, widget.userPhone, Icons.phone_android, enabled: false),
-            _buildTextField(emailController, "Personal Email", Icons.email_outlined),
-            
-            const SizedBox(height: 20),
-
-            _buildSectionTitle("📜 GST & Legal Info"),
-            Row(
-              children: [
-                Expanded(child: _buildTextField(gstController, "GST Number", Icons.verified_user_outlined)),
-                const SizedBox(width: 10),
-                Container(
-                  height: 55, margin: const EdgeInsets.only(bottom: 12),
-                  child: ElevatedButton(
-                    onPressed: verifyGST,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: const Text("Verify", style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
-            _buildTextField(panController, "PAN Card Number (Ex: ABCDE1234F)", Icons.credit_card),
-
-            const SizedBox(height: 20),
-
-            _buildSectionTitle("🏢 Company Details"),
-            _buildTextField(companyNameController, "Company Name", Icons.storefront),
-            _buildTextField(websiteController, "Website (Optional)", Icons.language),
-            _buildTextField(addressController, "Office Address", Icons.location_on_outlined),
-            _buildTextField(cityController, "City / State", Icons.map_outlined),
-
-            const SizedBox(height: 20),
-
-            _buildSectionTitle("💼 Business Profile"),
-            _buildDropdown("Category", ['Office', 'Shop', 'Startup', 'Factory'], businessType, (val) => setState(() => businessType = val!)),
-            _buildDropdown("Staff Size", ['1-10', '11-50', '51-200', '200+'], totalEmployees, (val) => setState(() => totalEmployees = val!)),
-
-            const SizedBox(height: 40),
-
-            SizedBox(
-              width: double.infinity, height: 55,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : handleCreateCompany,
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                child: isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white) 
-                  : const Text("Register Company", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-            const SizedBox(height: 40),
+      appBar: AppBar(title: const Text("Set Up Workspace", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)), backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Colors.black)),
+      body: Theme(
+        data: ThemeData(colorScheme: const ColorScheme.light(primary: Color(0xFF1565C0))),
+        child: isSaving 
+        ? const Center(child: CircularProgressIndicator()) 
+        : Stepper(
+          type: StepperType.vertical,
+          currentStep: _currentStep,
+          onStepContinue: () {
+            if (_currentStep < 2) setState(() => _currentStep += 1);
+            else _finishSetup();
+          },
+          onStepCancel: () {
+            if (_currentStep > 0) setState(() => _currentStep -= 1);
+          },
+          steps: [
+            Step(title: const Text("Company Profile", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), isActive: _currentStep >= 0, content: Column(children: [_buildTextField("Company Name *", "e.g. MyStaff Solutions", Icons.business, companyNameController), const SizedBox(height: 15), _buildTextField("GST Number (Optional)", "e.g. 22ABCDE1234F1Z5", Icons.receipt_long, gstController, maxLength: 15), const SizedBox(height: 15), _buildDropdown("Business Type", ['IT / Tech', 'Sales / Retail', 'Logistics', 'Manufacturing', 'Service', 'Other'], selectedBusinessType, (val) => setState(() => selectedBusinessType = val!)), const SizedBox(height: 15), _buildDropdown("Company Size", ['1-10 Employees', '11-50 Employees', '51-200 Employees', '200+ Employees'], selectedCompanySize, (val) => setState(() => selectedCompanySize = val!))])),
+            Step(title: const Text("Office Details", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), isActive: _currentStep >= 1, content: Column(children: [_buildTextField("Office Address", "e.g. 404, Business Hub", Icons.location_on, addressController), const SizedBox(height: 15), _buildTextField("City / State", "e.g. Surat, Gujarat", Icons.location_city, cityController), const SizedBox(height: 15), SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.pin_drop, color: Colors.red), label: const Text("Pin Location on Map"), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)))))])),
+            Step(title: const Text("Work Configuration", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), isActive: _currentStep >= 2, content: Column(children: [_buildDropdown("Working Days", ['Mon - Sat', 'Mon - Fri', 'Custom'], selectedDays, (val) => setState(() => selectedDays = val!)), const SizedBox(height: 15), _buildDropdown("Office Timings", ['09:00 AM - 06:00 PM', '10:00 AM - 07:00 PM', 'Night Shift (08 PM - 05 AM)', 'Custom'], selectedTiming, (val) => setState(() => selectedTiming = val!)), const SizedBox(height: 15), Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.orange.shade200)), child: const Row(children: [Icon(Icons.security, color: Colors.orange), SizedBox(width: 10), Expanded(child: Text("2-Step Verification and Live Location Tracking will be enabled.", style: TextStyle(fontSize: 12, color: Colors.black87)))]))])),
           ],
         ),
       ),
     );
   }
 
-  // Helper Widgets
-  Widget _buildSectionTitle(String title) {
-    return Align(alignment: Alignment.centerLeft, child: Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1)))));
+  Widget _buildTextField(String label, String hint, IconData icon, TextEditingController controller, {int? maxLength}) {
+    return TextField(controller: controller, maxLength: maxLength, decoration: InputDecoration(labelText: label, hintText: hint, prefixIcon: Icon(icon, color: const Color(0xFF1565C0)), filled: true, fillColor: Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)), counterText: ""));
   }
 
-  Widget _buildTextField(TextEditingController? controller, String hint, IconData icon, {bool enabled = true}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: controller, enabled: enabled,
-        decoration: InputDecoration(
-          hintText: hint, prefixIcon: Icon(icon, size: 20, color: const Color(0xFF1565C0)),
-          filled: true, fillColor: enabled ? Colors.white : Colors.grey.shade100,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdown(String label, List<String> items, String currentVal, Function(String?) onChange) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
-      child: DropdownButtonHideUnderline(child: DropdownButton<String>(value: currentVal, isExpanded: true, items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: onChange)),
-    );
+  Widget _buildDropdown(String label, List<String> items, String selectedValue, void Function(String?) onChanged) {
+    return DropdownButtonFormField<String>(value: selectedValue, decoration: InputDecoration(labelText: label, filled: true, fillColor: Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300))), items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: onChanged);
   }
 }

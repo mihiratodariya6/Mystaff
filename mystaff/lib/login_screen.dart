@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
-import 'otp_screen.dart'; // OTP screen link chhe
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 Firebase Auth ઈમ્પોર્ટ
+import 'role_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,31 +10,34 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  String fullPhoneNumber = ''; 
-  bool isLoading = false; 
+  bool isLoading = false;
 
-  Future<void> sendOTP() async {
-    if (fullPhoneNumber.isEmpty || fullPhoneNumber.length < 10) {
+  // 🚀 Google Sign-In નું જાદુઈ ફંક્શન
+  Future<void> _signInWithGoogle() async {
+    setState(() => isLoading = true);
+    
+    try {
+      // બ્રાઉઝર (Web) માટે Google લોગીનનો પોપ-અપ ખોલશે
+      GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+
+      if (userCredential.user != null && mounted) {
+        setState(() => isLoading = false);
+        
+        // યુઝરનું નામ લઈને વેલકમ મેસેજ બતાવશે!
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Welcome ${userCredential.user!.displayName}! 🎉"), backgroundColor: Colors.green)
+        );
+        
+        // લોગીન થાય એટલે સીધું Boss/Employee પેજ પર!
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RoleScreen()));
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Sacho Mobile Number nakho!")),
+        SnackBar(content: Text("Login Cancelled or Failed ❌"), backgroundColor: Colors.red)
       );
-      return;
     }
-
-    setState(() { isLoading = true; });
-    await Future.delayed(const Duration(seconds: 2)); // 2 sec dummy loading
-    setState(() { isLoading = false; });
-
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OtpScreen(
-          verificationId: "dummy_123",
-          phoneNumber: fullPhoneNumber,
-        ),
-      ),
-    );
   }
 
   @override
@@ -43,44 +46,59 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Spacer(),
-              Image.asset('assets/logo.png', height: 100),
-              const SizedBox(height: 16),
-              const Text('MyStaff', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))),
-              const SizedBox(height: 40),
-              IntlPhoneField(
-                decoration: InputDecoration(
-                  labelText: 'Mobile Number',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: Color(0xFF1565C0), width: 2), borderRadius: BorderRadius.circular(12)),
-                ),
-                initialCountryCode: 'IN',
-                onChanged: (phone) { fullPhoneNumber = phone.completeNumber; },
+
+              // 🏢 તમારો MyStaff લોગો
+              Center(
+                child: Image.asset('assets/logo.png', height: 120, errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.business_center, size: 100, color: Color(0xFF1565C0));
+                }),
               ),
-              const SizedBox(height: 12),
-              const Text('We will send a 6-digit OTP for verification', style: TextStyle(color: Colors.grey, fontSize: 12)),
-              const SizedBox(height: 24),
+              const SizedBox(height: 30),
+
+              const Text("Welcome to MyStaff 👋", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 10),
+              const Text("Log in securely with your Google account. No passwords, no OTPs, 100% free!", textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: Colors.grey, height: 1.5)),
+
+              const SizedBox(height: 50),
+
+              // 🚀 મસ્ત પ્રીમિયમ Google બટન
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 55,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : sendOTP, 
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), elevation: 0),
+                  onPressed: isLoading ? null : _signInWithGoogle,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      side: BorderSide(color: Colors.grey.shade300)
+                    ),
+                  ),
                   child: isLoading
-                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Get OTP', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                      ? const SizedBox(height: 25, width: 25, child: CircularProgressIndicator(strokeWidth: 3))
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Google નો અસલી 'G' લોગો
+                            Image.network("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1024px-Google_%22G%22_logo.svg.png", height: 24),
+                            const SizedBox(width: 15),
+                            const Text("Continue with Google", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                          ],
+                        ),
                 ),
               ),
+
               const Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [Icon(Icons.lock_outline, size: 14, color: Colors.grey), SizedBox(width: 4), Text('Secure Login', style: TextStyle(color: Colors.grey, fontSize: 12))],
-              ),
-              const SizedBox(height: 24),
+              const Text("By continuing, you agree to our Terms & Privacy Policy.", style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 10),
             ],
           ),
         ),

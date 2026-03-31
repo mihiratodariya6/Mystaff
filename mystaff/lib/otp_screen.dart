@@ -1,136 +1,88 @@
 import 'package:flutter/material.dart';
-import 'role_screen.dart'; // 👈 Navi Role Screen ne link kari didhi chhe
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 Firebase Auth ઈમ્પોર્ટ
+import 'role_screen.dart'; 
 
 class OtpScreen extends StatefulWidget {
-  final String verificationId; 
-  final String phoneNumber; 
-
-  const OtpScreen({
-    super.key,
-    required this.verificationId,
-    required this.phoneNumber,
-  });
+  final String phoneNumber;
+  final ConfirmationResult confirmationResult; // 👈 Login પરથી આવેલો ડેટા
+  
+  const OtpScreen({super.key, required this.phoneNumber, required this.confirmationResult});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  String currentText = "";
+  final TextEditingController otpController = TextEditingController();
   bool isLoading = false;
 
-  Future<void> verifyOTP() async {
-    if (currentText.length != 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Pura 6 aakda no OTP nakho!"))
-      );
-      return;
+  Future<void> _verifyOTP() async {
+    if (otpController.text.length == 6) { 
+      setState(() => isLoading = true);
+      
+      try {
+        // 🚀 અસલી OTP ફાયરબેઝ જોડે મેચ કરશે
+        await widget.confirmationResult.confirm(otpController.text);
+        
+        if (mounted) {
+          setState(() => isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Login Successful! 🎉"), backgroundColor: Colors.green));
+          
+          // OTP સાચો પડે એટલે Role Screen પર જશે
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RoleScreen()));
+        }
+      } catch (e) {
+        setState(() => isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Invalid OTP! Please try again ❌"), backgroundColor: Colors.red));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter 6 digits"), backgroundColor: Colors.orange));
     }
-
-    setState(() { isLoading = true; });
-    
-    // ⏳ 2 Second nu dummy verify (UI testing mate)
-    await Future.delayed(const Duration(seconds: 2)); 
-    
-    setState(() { isLoading = false; });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Login Successful! 🎉"))
-    );
-    
-    // 👇 Aahiya thi direct Role Screen par jase (ane pacha na aavi shakay e rite)
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const RoleScreen()),
-      (route) => false, // Pacha OTP screen par javano rasto bandh
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context)
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Verify OTP',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0D47A1))
+      appBar: AppBar(backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Colors.black)),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Enter OTP 💬", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const SizedBox(height: 10),
+            Text("We have sent a verification code to ${widget.phoneNumber}", style: const TextStyle(fontSize: 15, color: Colors.grey, height: 1.5)),
+            
+            const SizedBox(height: 40),
+
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 24, letterSpacing: 15, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: "000000",
+                counterText: "", 
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFF1565C0), width: 2)),
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Enter the 6-digit code sent to\n${widget.phoneNumber}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: Colors.grey)
+            ),
+
+            const SizedBox(height: 30),
+
+            SizedBox(
+              width: double.infinity, height: 55,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _verifyOTP,
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1565C0), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                child: isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("Verify & Login", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
-              const SizedBox(height: 40),
-              
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: TextField(
-                  maxLength: 6,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 32,
-                    letterSpacing: 20, // 6 Box jevu look aapse
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1565C0)
-                  ),
-                  decoration: InputDecoration(
-                    counterText: "",
-                    filled: true,
-                    fillColor: Colors.blue.shade50,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: BorderSide.none
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() { currentText = value; });
-                  },
-                ),
-              ),
-              const SizedBox(height: 30),
-              
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : verifyOTP,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1565C0),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-                    elevation: 0
-                  ),
-                  child: isLoading
-                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Verify OTP', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              TextButton(
-                onPressed: () {},
-                child: const Text(
-                  "Didn't receive code? Resend",
-                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)
-                )
-              )
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
