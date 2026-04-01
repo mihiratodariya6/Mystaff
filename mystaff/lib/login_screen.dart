@@ -32,13 +32,15 @@ class _LoginScreenState extends State<LoginScreen> {
         // લોગીન થાય એટલે સીધું Boss/Employee પેજ પર!
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RoleScreen()));
       }
-    } catch (e) {
-      setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login Cancelled or Failed ❌"), backgroundColor: Colors.red)
-      );
-    }
-  }
+   } catch (e) {
+  // આ કોડ ગૂગલ ની સાચી એરર સ્ક્રીન પર દેખાડશે
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('Error: ${e.toString()}'), 
+      duration: Duration(seconds: 10), // એરર વાંચવા 10 સેકન્ડ રોકાશે
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
