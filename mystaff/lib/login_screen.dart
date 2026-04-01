@@ -32,15 +32,19 @@ class _LoginScreenState extends State<LoginScreen> {
         // લોગીન થાય એટલે સીધું Boss/Employee પેજ પર!
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RoleScreen()));
       }
-   } catch (e) {
-  // આ કોડ ગૂગલ ની સાચી એરર સ્ક્રીન પર દેખાડશે
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('Error: ${e.toString()}'), 
-      duration: Duration(seconds: 10), // એરર વાંચવા 10 સેકન્ડ રોકાશે
-    ),
-  );
-}
+    } catch (e) {
+      // એરર આવે એટલે લોડીંગ બંધ કરવા 
+      setState(() => isLoading = false); 
+
+      // આ કોડ ગૂગલ ની સાચી એરર સ્ક્રીન પર દેખાડશે
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'), 
+          duration: const Duration(seconds: 10), // એરર વાંચવા 10 સેકન્ડ રોકાશે
+        ),
+      );
+    }
+  } // 👈 🎯 ભાઈ, આ બ્રેકેટ મિસિંગ હતો તારા કોડ માં! 
 
   @override
   Widget build(BuildContext context) {
