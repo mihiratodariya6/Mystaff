@@ -1,22 +1,40 @@
 name: Build MyStaff APK
 on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    
     - uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
         java-version: '17'
+        
     - uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
+        
     - run: flutter pub get
       working-directory: ./mystaff
+      
     - run: flutter build apk --release --target-platform android-arm64
       working-directory: ./mystaff
+      
+    # 👇 આ નવું સ્ટેપ છે જે તમારી APK ને સિક્રેટ્સથી સાઇન (Sign) કરશે 👇
+    - name: Sign APK with Keystore
+      uses: r0adkll/sign-android-release@v1
+      id: sign_app
+      with:
+        releaseDirectory: mystaff/build/app/outputs/flutter-apk
+        signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+        alias: ${{ secrets.KEY_ALIAS }}
+        keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+        keyPassword: ${{ secrets.KEY_PASSWORD }}
+        
+    # 👇 અહી આપણે નવી સાઇન થયેલી APK અપલોડ કરીશું 👇
     - uses: actions/upload-artifact@v4
       with:
         name: MyStaff-APK
-        path: mystaff/build/app/outputs/flutter-apk/app-release.apk
+        path: ${{steps.sign_app.outputs.signedReleaseFile}}
