@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 Firebase Auth ઈમ્પોર્ટ
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart'; // 👈 નવું ઈમ્પોર્ટ
 import 'role_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -12,39 +13,57 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
 
-  // 🚀 Google Sign-In નું જાદુઈ ફંક્શન
+  // 🚀 Google Sign-In નું જાદુઈ ફંક્શન (100% Mobile માટે સાચું)
   Future<void> _signInWithGoogle() async {
     setState(() => isLoading = true);
-    
+
     try {
-      // બ્રાઉઝર (Web) માટે Google લોગીનનો પોપ-અપ ખોલશે
-      GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+      // ૧. મોબાઈલ માં ગૂગલ એકાઉન્ટ સિલેક્ટ કરવાનું પોપ-અપ
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      // જો યુઝર કોઈ એકાઉન્ટ સિલેક્ટ કર્યા વગર Back દબાવી દે તો લોડીંગ બંધ કરો
+      if (googleUser == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // ૨. ગૂગલ પાસેથી ઓથોરાઈઝેશન (ટોકન) લેવા
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // ૩. ફાયરબેઝ માટે ક્રેડેન્શિયલ બનાવવા
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // ૪. ફાયરબેઝ માં લોગીન કરાવવું 
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
 
       if (userCredential.user != null && mounted) {
         setState(() => isLoading = false);
-        
+
         // યુઝરનું નામ લઈને વેલકમ મેસેજ બતાવશે!
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Welcome ${userCredential.user!.displayName}! 🎉"), backgroundColor: Colors.green)
         );
-        
+
         // લોગીન થાય એટલે સીધું Boss/Employee પેજ પર!
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RoleScreen()));
       }
     } catch (e) {
       // એરર આવે એટલે લોડીંગ બંધ કરવા 
-      setState(() => isLoading = false); 
+      setState(() => isLoading = false);
 
-      // આ કોડ ગૂગલ ની સાચી એરર સ્ક્રીન પર દેખાડશે
+      // એરર સ્ક્રીન પર દેખાડવા
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'), 
-          duration: const Duration(seconds: 10), // એરર વાંચવા 10 સેકન્ડ રોકાશે
+          content: Text('Error: ${e.toString()}'),
+          duration: const Duration(seconds: 10),
         ),
       );
     }
-  } // 👈 🎯 ભાઈ, આ બ્રેકેટ મિસિંગ હતો તારા કોડ માં! 
+  }
 
   @override
   Widget build(BuildContext context) {
