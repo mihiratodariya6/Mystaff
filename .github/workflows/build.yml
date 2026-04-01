@@ -22,7 +22,10 @@ jobs:
     - run: flutter build apk --release --target-platform android-arm64
       working-directory: ./mystaff
       
-    # 👇 અહી બિલ્ડ ટુલ્સ વર્ઝન એડ કર્યું છે 👇
+    # 👇 આ સ્ટેપ GitHub ના સર્વરમાં જૂનું 29.0.3 ટૂલ ઇન્સ્ટોલ કરશે 👇
+    - name: Install Android Build Tools 29.0.3
+      run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;29.0.3"
+      
     - name: Sign APK with Keystore
       uses: r0adkll/sign-android-release@v1
       id: sign_app
@@ -32,7 +35,6 @@ jobs:
         alias: ${{ secrets.KEY_ALIAS }}
         keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
         keyPassword: ${{ secrets.KEY_PASSWORD }}
-        buildToolsVersion: '34.0.0' 
         
     - uses: actions/upload-artifact@v4
       with:
