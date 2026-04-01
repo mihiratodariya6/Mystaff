@@ -29,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // 🎯 અહી આપણે accessToken કાઢી નાખ્યું છે 
       final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
