@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "114587188132",
+    "project_id": "mystaff-f7b12",
+    "storage_bucket": "mystaff-f7b12.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:114587188132:android:09aadb5d281f42a88e1f31",
+        "android_client_info": {
+          "package_name": "com.example.mystaff"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "114587188132-u6unl13gqj6p78n11eqce56nc7le20dh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mystaff",
+            "certificate_hash": "e8bfdee5d13306c1a18a3580e62b3201c5eb982e"
+          }
+        },
+        {
+          "client_id": "114587188132-vecmnv8n64uajemolrf8kv5ajtj0ino4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDe_JE6wkeg-Vhv_waAmD18LniEKN2OcRg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "114587188132-vecmnv8n64uajemolrf8kv5ajtj0ino4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
