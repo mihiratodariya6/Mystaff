@@ -50,6 +50,9 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/logo.png"
+  # Android mate adaptive icons setting
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/app_icon.png"
 
 flutter:
   uses-material-design: true
