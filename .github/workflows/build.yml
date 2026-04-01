@@ -22,7 +22,7 @@ jobs:
     - run: flutter build apk --release --target-platform android-arm64
       working-directory: ./mystaff
       
-    # 👇 આ નવું સ્ટેપ છે જે તમારી APK ને સિક્રેટ્સથી સાઇન (Sign) કરશે 👇
+    # 👇 અહી બિલ્ડ ટુલ્સ વર્ઝન એડ કર્યું છે 👇
     - name: Sign APK with Keystore
       uses: r0adkll/sign-android-release@v1
       id: sign_app
@@ -32,8 +32,8 @@ jobs:
         alias: ${{ secrets.KEY_ALIAS }}
         keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
         keyPassword: ${{ secrets.KEY_PASSWORD }}
+        buildToolsVersion: '34.0.0' 
         
-    # 👇 અહી આપણે નવી સાઇન થયેલી APK અપલોડ કરીશું 👇
     - uses: actions/upload-artifact@v4
       with:
         name: MyStaff-APK
