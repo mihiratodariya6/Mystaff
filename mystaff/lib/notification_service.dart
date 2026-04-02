@@ -8,14 +8,17 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
+    // ૧. પરમિશન માંગો
     await _messaging.requestPermission();
 
+    // ૨. એન્ડ્રોઇડ સેટિંગ્સ
     const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initSettings = InitializationSettings(android: androidSettings);
     
-    // 👈 અહીં ફેરફાર કર્યો છે
+    // ૩. ઇનિશિયલાઈઝ કરો
     await _localNotifications.initialize(initSettings);
 
+    // ૪. ફોરગ્રાઉન્ડ મેસેજ સાંભળો
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message);
     });
@@ -38,15 +41,17 @@ class NotificationService {
       'MyStaff Notifications',
       importance: Importance.max,
       priority: Priority.high,
+      ticker: 'ticker',
     );
+    
     const NotificationDetails details = NotificationDetails(android: androidDetails);
 
-    // 👈 અહીં પણ સુધારો કર્યો છે
+    // 🚀 અહીં જાદુ છે - બધું એકદમ ચોકસાઈથી લખ્યું છે
     _localNotifications.show(
-      DateTime.now().millisecond,
-      message.notification?.title ?? "Notification",
-      message.notification?.body ?? "",
-      details,
+      DateTime.now().millisecond, // ID
+      message.notification?.title ?? "New Notification", // Title
+      message.notification?.body ?? "", // Body
+      details, // NotificationDetails
     );
   }
 }
