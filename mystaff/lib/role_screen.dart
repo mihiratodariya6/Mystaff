@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 👈 મેમરીમાં સેવ કરવા માટે
 
 // 🔗 બને નવા સેટઅપ પેજ અહી ઈમ્પોર્ટ કર્યા છે
 import 'boss_setup_screen.dart'; 
@@ -29,9 +30,15 @@ class RoleScreen extends StatelessWidget {
                 "Manage your staff, attendance & reports.", 
                 Icons.admin_panel_settings, 
                 Colors.orange, 
-                () {
-                  // 🚀 ડેશબોર્ડની જગ્યાએ પહેલા Boss Setup Screen ખુલશે
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const BossSetupScreen()));
+                () async {
+                  // 🚀 ૧. ફોનની મેમરીમાં કાયમ માટે સેવ કરો કે આ બોસ છે
+                  SharedPreferences prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('user_role', 'boss');
+
+                  // 🚀 ૨. ડેશબોર્ડની જગ્યાએ પહેલા Boss Setup Screen ખુલશે
+                  if (context.mounted) {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const BossSetupScreen()));
+                  }
                 }
               ),
               
@@ -44,9 +51,15 @@ class RoleScreen extends StatelessWidget {
                 "Mark attendance, apply for leave & view slips.", 
                 Icons.badge, 
                 const Color(0xFF1565C0), 
-                () {
-                  // 🚀 ડેશબોર્ડની જગ્યાએ પહેલા Employee Details ફોર્મ ખુલશે
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const EmployeeDetailsScreen()));
+                () async {
+                  // 🚀 ૧. ફોનની મેમરીમાં કાયમ માટે સેવ કરો કે આ એમ્પ્લોઈ છે
+                  SharedPreferences prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('user_role', 'employee');
+
+                  // 🚀 ૨. ડેશબોર્ડની જગ્યાએ પહેલા Employee Details ફોર્મ ખુલશે
+                  if (context.mounted) {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const EmployeeDetailsScreen()));
+                  }
                 }
               ),
             ],

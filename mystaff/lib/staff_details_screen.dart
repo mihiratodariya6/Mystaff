@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 ડેટાબેઝ માટે
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 class StaffDetailsScreen extends StatefulWidget {
   final Map<String, String> staffData;
-  final String staffUid; // 👈 આ નવું ઉમેર્યું છે (એમ્પ્લોઈનું અસલી ID)
+  final String staffUid; 
 
   const StaffDetailsScreen({super.key, required this.staffData, required this.staffUid});
 
@@ -16,7 +16,6 @@ class StaffDetailsScreen extends StatefulWidget {
 class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
   int _currentRating = 0; 
   
-  // 🚀 ટ્રેકિંગ માટેના નવા વેરીએબલ
   bool isRemoteAllowed = false; 
   bool isLoadingPermission = true;
 
@@ -26,10 +25,9 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
     double initialRating = double.tryParse(widget.staffData['stars'] ?? "0") ?? 0;
     _currentRating = initialRating.round(); 
     
-    _fetchPermission(); // 👈 એપ ખુલે એટલે ચેક કરશે કે પરમિશન છે કે નહિ
+    _fetchPermission(); 
   }
 
-  // 📥 ડેટાબેઝમાંથી પરમિશન લાવશે
   void _fetchPermission() async {
     if (widget.staffUid.isEmpty) {
       setState(() => isLoadingPermission = false);
@@ -49,7 +47,6 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
     }
   }
 
-  // 🕹️ સ્વીચ દબાવે ત્યારે ડેટાબેઝમાં સેવ થશે
   void _toggleRemoteWork(bool value) async {
     setState(() => isRemoteAllowed = value);
     try {
@@ -67,8 +64,24 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
     }
   }
 
+  // 🚀 નવું ઉમેર્યું: રેટિંગ ને ફાયરબેઝમાં સેવ કરવાનું લોજીક
+  Future<void> _saveRating() async {
+    try {
+      await FirebaseFirestore.instance.collection('employees').doc(widget.staffUid).update({
+        'stars': _currentRating.toString(),
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Rating Saved: $_currentRating Stars! ⭐"), backgroundColor: Colors.green));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+    }
+  }
+
+  // 🚀 નવું ઉમેર્યું: જે કારીગરની પ્રોફાઈલ હોય એનો જ ફોન નંબર લાગશે
   Future<void> _makeCall() async {
-    final Uri url = Uri.parse("tel:9924247523");
+    final String phone = widget.staffData['phone'] ?? "0000000000"; 
+    final Uri url = Uri.parse("tel:$phone");
     if (!await launchUrl(url)) {
       if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not launch call")));
     }
@@ -78,19 +91,18 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: Text(widget.staffData['name']!, style: const TextStyle(color: Colors.black)), backgroundColor: Colors.white, elevation: 1, iconTheme: const IconThemeData(color: Colors.black)),
+      appBar: AppBar(title: Text(widget.staffData['name'] ?? "Staff", style: const TextStyle(color: Colors.black)), backgroundColor: Colors.white, elevation: 1, iconTheme: const IconThemeData(color: Colors.black)),
       body: SingleChildScrollView(
         child: Column(
           children: [
             const SizedBox(height: 20),
-            CircleAvatar(radius: 50, backgroundColor: Colors.blue.shade50, child: Text(widget.staffData['name']![0], style: const TextStyle(fontSize: 40, color: Color(0xFF1565C0), fontWeight: FontWeight.bold))),
+            CircleAvatar(radius: 50, backgroundColor: Colors.blue.shade50, child: Text(widget.staffData['name']?[0] ?? "S", style: const TextStyle(fontSize: 40, color: Color(0xFF1565C0), fontWeight: FontWeight.bold))),
             const SizedBox(height: 10),
-            Text(widget.staffData['name']!, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            Text(widget.staffData['role']!, style: const TextStyle(color: Colors.grey)),
+            Text(widget.staffData['name'] ?? "No Name", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(widget.staffData['role'] ?? "Employee", style: const TextStyle(color: Colors.grey)),
             
             const SizedBox(height: 20),
             
-            // 📊 STATS SUMMARY
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Container(
@@ -108,7 +120,6 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
 
             const SizedBox(height: 20),
 
-            // ⭐️ RATE EMPLOYEE SECTION
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(20),
@@ -128,7 +139,7 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton(
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Rating Saved: $_currentRating Stars! ⭐"), backgroundColor: Colors.green)),
+                    onPressed: _saveRating, // 👈 હવે અહી ફાયરબેઝ વાળું ફંક્શન કોલ થશે
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black, elevation: 0),
                     child: const Text("Save Rating", style: TextStyle(fontWeight: FontWeight.bold)),
                   )
@@ -138,7 +149,6 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
 
             const SizedBox(height: 20),
 
-            // 📍 🚀 TRACKING SETTINGS (NEW SMART SWITCH)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey.shade300)),
@@ -155,14 +165,13 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
 
             const SizedBox(height: 25),
 
-            // 🔘 ACTION BUTTONS
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _actionBtn(Icons.call, "Call", Colors.green, _makeCall),
+                _actionBtn(Icons.call, "Call", Colors.green, _makeCall), // 👈 અહી ફોન વાળું ફંક્શન છે
                 const SizedBox(width: 20),
                 _actionBtn(Icons.chat, "Chat", Colors.blue, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => MyStaffChatScreen(staffName: widget.staffData['name']!)));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => MyStaffChatScreen(staffName: widget.staffData['name'] ?? "Staff")));
                 }),
               ],
             ),
@@ -170,7 +179,6 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
             const SizedBox(height: 30),
             const Divider(),
 
-            // 📅 ATTENDANCE HISTORY
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -207,7 +215,6 @@ class _StaffDetailsScreenState extends State<StaffDetailsScreen> {
   }
 }
 
-// 💬 INTERNAL CUSTOM CHAT SCREEN (Same as your old code)
 class MyStaffChatScreen extends StatefulWidget {
   final String staffName;
   const MyStaffChatScreen({super.key, required this.staffName});
