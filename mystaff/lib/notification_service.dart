@@ -1,24 +1,23 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' as local; // 👈 Alias વાપર્યો
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  
+  // 🚀 આ લાઈન ખાસ ધ્યાનથી જોજો
+  static final local.FlutterLocalNotificationsPlugin _localNotifications = local.FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
-    // ૧. પરમિશન માંગો
     await _messaging.requestPermission();
 
-    // ૨. એન્ડ્રોઇડ સેટિંગ્સ
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initSettings = InitializationSettings(android: androidSettings);
+    const local.AndroidInitializationSettings androidSettings = local.AndroidInitializationSettings('@mipmap/ic_launcher');
+    const local.InitializationSettings initSettings = local.InitializationSettings(android: androidSettings);
     
-    // ૩. ઇનિશિયલાઈઝ કરો
+    // ✅ હવે અહીં એરર નહીં આવે
     await _localNotifications.initialize(initSettings);
 
-    // ૪. ફોરગ્રાઉન્ડ મેસેજ સાંભળો
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message);
     });
@@ -36,22 +35,20 @@ class NotificationService {
   }
 
   static void _showLocalNotification(RemoteMessage message) {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const local.AndroidNotificationDetails androidDetails = local.AndroidNotificationDetails(
       'mystaff_channel', 
       'MyStaff Notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'ticker',
+      importance: local.Importance.max,
+      priority: local.Priority.high,
     );
-    
-    const NotificationDetails details = NotificationDetails(android: androidDetails);
+    const local.NotificationDetails details = local.NotificationDetails(android: androidDetails);
 
-    // 🚀 અહીં જાદુ છે - બધું એકદમ ચોકસાઈથી લખ્યું છે
+    // ✅ અહીં પણ 'local.' નો ઉપયોગ કર્યો છે
     _localNotifications.show(
-      DateTime.now().millisecond, // ID
-      message.notification?.title ?? "New Notification", // Title
-      message.notification?.body ?? "", // Body
-      details, // NotificationDetails
+      DateTime.now().millisecond,
+      message.notification?.title ?? "New Message",
+      message.notification?.body ?? "",
+      details,
     );
   }
 }
