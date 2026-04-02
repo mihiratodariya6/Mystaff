@@ -21,7 +21,7 @@ dependencies:
   # --- Features ---
   url_launcher: ^6.3.2
   table_calendar: ^3.2.0
-  image_picker: ^1.1.2
+  image_picker: ^1.2.1
 
   # --- Reports & Sharing ---
   pdf: ^3.12.0
@@ -39,6 +39,8 @@ dependencies:
   firebase_storage: ^13.2.0
   geolocator: ^14.0.2
   google_sign_in: 6.2.1
+  firebase_messaging: ^16.1.3
+  flutter_local_notifications: ^21.0.0
 
 dev_dependencies:
   flutter_test:

@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:csc_picker_plus/csc_picker_plus.dart'; // 👈 Navu Fixed Package
+import 'package:csc_picker_plus/csc_picker_plus.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
+
+// 👈 તારા ડેશબોર્ડની ફાઈલ ઈમ્પોર્ટ કરવી પડશે
+import 'employee_dashboard_screen.dart'; 
 
 class EmployeeJoinScreen extends StatefulWidget {
   final String userPhone;
@@ -55,12 +61,73 @@ class _EmployeeJoinScreenState extends State<EmployeeJoinScreen> {
     }
   }
 
-  void handleFinalJoin() {
-    if (firstNameController.text.isEmpty || surnameController.text.isEmpty || selectedDesignation == null) {
-      _showMessage("Error: Name and Designation are required!", Colors.red);
+  // 🚀 આ ફંક્શનમાં મેં અસલી જાદુ ઉમેર્યો છે (Auto-Join Logic)
+  Future<void> handleFinalJoin() async {
+    String enteredCode = inviteCodeController.text.trim().toUpperCase();
+
+    if (firstNameController.text.isEmpty || surnameController.text.isEmpty || selectedDesignation == null || enteredCode.isEmpty) {
+      _showMessage("Error: Name, Designation and Invite Code are required!", Colors.red);
       return;
     }
-    _showMessage("Success: Profile submitted successfully! 🎉", Colors.green);
+
+    setState(() => isLoading = true);
+
+    try {
+      // 🔍 ૧. ડેટાબેઝમાં ચેક કરો કે આ કંપની કોડ (Invite Code) સાચો છે?
+      var companyDoc = await FirebaseFirestore.instance.collection('companies').doc(enteredCode).get();
+
+      if (!companyDoc.exists) {
+        setState(() => isLoading = false);
+        _showMessage("Invalid Invite Code! Please check with your Boss. ❌", Colors.red);
+        return;
+      }
+
+      // ૨. જો કંપની મળી જાય, તો એનું નામ ખેંચી લો
+      String companyNameFromDb = companyDoc['companyName'] ?? "My Company";
+
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // ૩. ફાયરબેઝમાં એમ્પ્લોઈના ડેટામાં કંપનીની વિગતો લિંક કરો
+        await FirebaseFirestore.instance.collection('employees').doc(user.uid).set({
+          'uid': user.uid,
+          'firstName': firstNameController.text.trim(),
+          'middleName': middleNameController.text.trim(),
+          'surname': surnameController.text.trim(),
+          'name': "${firstNameController.text.trim()} ${surnameController.text.trim()}",
+          'dob': dobController.text,
+          'email': emailController.text.trim(),
+          'phone': widget.userPhone,
+          'emergencyPhone': emergencyContactController.text.trim(),
+          'companyCode': enteredCode, // 👈 આ ચાવી છે
+          'companyName': companyNameFromDb, // 👈 નામ પણ અહીં જ સેવ કરી લઈએ
+          'address': addressController.text.trim(),
+          'city': cityValue,
+          'state': stateValue,
+          'country': countryValue,
+          'role': selectedDesignation,
+          'aadhar': aadharController.text.trim(),
+          'pan': panController.text.trim(),
+          'isApproved': false, 
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // ૪. મોબાઈલની મેમરીમાં (Local Cache) પણ સેવ કરો
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_role', 'employee');
+        await prefs.setString('company_code', enteredCode);
+
+        setState(() => isLoading = false);
+        _showMessage("Registered Successfully! Joined $companyNameFromDb 🎉", Colors.green);
+        
+        // ૫. રજીસ્ટ્રેશન પછી સીધું ડેશબોર્ડ પર મોકલી દો!
+        if (mounted) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const EmployeeDashboardScreen()));
+        }
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      _showMessage("Error: $e", Colors.red);
+    }
   }
 
   void _showMessage(String msg, Color color) {
@@ -76,7 +143,9 @@ class _EmployeeJoinScreenState extends State<EmployeeJoinScreen> {
         backgroundColor: Colors.white, elevation: 0,
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
       ),
-      body: SingleChildScrollView(
+      body: isLoading 
+      ? const Center(child: CircularProgressIndicator())
+      : SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
@@ -94,7 +163,7 @@ class _EmployeeJoinScreenState extends State<EmployeeJoinScreen> {
             const SizedBox(height: 30),
 
             _buildSectionTitle("Company Details"),
-            _buildTextField(inviteCodeController, "Company Invite Code (Ex: MS-MI123)", Icons.vpn_key),
+            _buildTextField(inviteCodeController, "Company Invite Code (Ex: ABC-1234)", Icons.vpn_key),
             
             const SizedBox(height: 25),
 
@@ -120,7 +189,6 @@ class _EmployeeJoinScreenState extends State<EmployeeJoinScreen> {
             const SizedBox(height: 25),
 
             _buildSectionTitle("Permanent Address"),
-            // 📍 Fixed CSCPickerPlus
             CSCPickerPlus(
               layout: Layout.vertical,
               onCountryChanged: (value) => setState(() => countryValue = value),
@@ -153,7 +221,7 @@ class _EmployeeJoinScreenState extends State<EmployeeJoinScreen> {
             SizedBox(
               width: double.infinity, height: 55,
               child: ElevatedButton(
-                onPressed: handleFinalJoin,
+                onPressed: isLoading ? null : handleFinalJoin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1565C0), 
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
