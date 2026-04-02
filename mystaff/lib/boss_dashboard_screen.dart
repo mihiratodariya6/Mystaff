@@ -123,7 +123,7 @@ class _BossDashboardScreenState extends State<BossDashboardScreen> {
                   "name": empName,
                   "role": empRole,
                   "status": isPresent ? "Present" : "Absent", 
-                  stars: empDoc['stars'] ?? "0.0" 
+                  'stars': empDoc['stars'] ?? "0.0"
                 }));
               }
             } else {
