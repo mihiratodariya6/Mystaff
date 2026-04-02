@@ -8,7 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart'; 
 import 'package:geolocator/geolocator.dart'; 
 
-import 'services/notification_service.dart'; // 👈 નોટિફિકેશન એન્જિન
+import 'notification_service.dart';
 import 'login_screen.dart'; 
 import 'chat_conversation_screen.dart'; 
 import 'edit_profile_screen.dart';        
