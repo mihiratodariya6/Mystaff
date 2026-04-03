@@ -3,13 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:intl/intl.dart'; 
-import 'services/notification_service.dart'; // 👈 નોટિફિકેશન માટે
+import 'notification_service.dart';
 
-// --- બધી જ જરૂરી સ્ક્રીન્સ અહી ઈમ્પોર્ટ કરી છે ---
 import 'staff_details_screen.dart';
 import 'leave_approval_screen.dart'; 
-import 'company_reports_screens.dart'; // 👈 રિપોર્ટ માટે
-import 'subscription_screen.dart';    // 👈 પેમેન્ટ/પ્રો પ્લાન માટે
+import 'company_reports_screens.dart'; 
+import 'subscription_screen.dart';    
 import 'login_screen.dart'; 
 
 class BossDashboardScreen extends StatefulWidget {
@@ -89,7 +88,6 @@ class _BossDashboardScreenState extends State<BossDashboardScreen> {
     );
   }
 
-  // --- 🏠 1. MAIN DASHBOARD ---
   Widget _buildMainDashboard() {
     String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
@@ -159,7 +157,6 @@ class _BossDashboardScreenState extends State<BossDashboardScreen> {
     );
   }
 
-  // --- 📅 2. ATTENDANCE PAGE ---
   Widget _buildAttendancePage() {
     String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
     return Padding(
@@ -194,7 +191,6 @@ class _BossDashboardScreenState extends State<BossDashboardScreen> {
     );
   }
 
-  // --- 📄 3. REPORTS PAGE (અહી આપણે નવી લિંક જોડી છે) ---
   Widget _buildReportsPage() {
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -203,12 +199,9 @@ class _BossDashboardScreenState extends State<BossDashboardScreen> {
         children: [
           const Text("Company Reports", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
-          
-          // 📊 આ તમારી નવી લિંક છે જે હવે મસ્ત રીતે કામ કરશે!
           _reportItem("Monthly Attendance Summary", Icons.analytics, Colors.blue, onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const MonthlyAttendanceReport()));
           }),
-          
           _reportItem("Salary & Overtime Report", Icons.payments, Colors.green, onTap: () {}),
           _reportItem("Late Comers Analysis", Icons.timer, Colors.orange, onTap: () {}),
           _reportItem("Pending Leave Requests", Icons.event_busy_outlined, Colors.red, onTap: () {
@@ -219,15 +212,12 @@ class _BossDashboardScreenState extends State<BossDashboardScreen> {
     );
   }
 
-  // --- ⚙️ 4. SETTINGS PAGE (અહી પેમેન્ટની લિંક પણ નાખી દીધી છે) ---
   Widget _buildSettingsPage() {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
         const Text("Settings", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
         const SizedBox(height: 20),
-        
-        // 🚀 PRO Upgrade Button
         Container(
           margin: const EdgeInsets.only(bottom: 15),
           decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.amber.shade200, Colors.amber.shade400]), borderRadius: BorderRadius.circular(15)),
@@ -240,7 +230,6 @@ class _BossDashboardScreenState extends State<BossDashboardScreen> {
             },
           ),
         ),
-
         _settingTile("Edit Company Profile", Icons.business, onTap: () {}),
         _settingTile("Manage Admin Access", Icons.security, onTap: () {}),
         _settingTile("Logout", Icons.logout, color: Colors.red, onTap: _showLogoutDialog),
@@ -248,7 +237,6 @@ class _BossDashboardScreenState extends State<BossDashboardScreen> {
     );
   }
 
-  // --- UI HELPERS ---
   Widget _buildStatCard(String title, String count, Color color) { return Expanded(child: Container(margin: const EdgeInsets.symmetric(horizontal: 4), padding: const EdgeInsets.symmetric(vertical: 20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey.shade200)), child: Column(children: [Text(count, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)), Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey))]))); }
   Widget _buildInviteCard() { return Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF0D47A1), Color(0xFF1976D2)]), borderRadius: BorderRadius.circular(15)), child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("Invite Your Staff", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)), Text("Share Code: ${widget.companyId}", style: const TextStyle(color: Colors.white70, fontSize: 12))])), ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.blue), child: const Text("Share"))])); }
   Widget _buildStaffItem(Map<String, String> staff) {
