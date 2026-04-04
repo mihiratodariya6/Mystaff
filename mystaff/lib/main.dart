@@ -6,13 +6,30 @@ import 'splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 🔥 Firebase ચાલુ કરો
-  await Firebase.initializeApp();
-  
-  // 🔔 નોટિફિકેશન સર્વિસ ચાલુ કરો
-  await NotificationService.initialize(); 
+  try {
+    // 🔥 ફાયરબેઝ અને નોટિફિકેશન ચાલુ કરો
+    await Firebase.initializeApp();
+    await NotificationService.initialize(); 
 
-  runApp(const MyStaffApp());
+    // જો બધું બરાબર હશે તો એપ ચાલુ થશે
+    runApp(const MyStaffApp());
+  } catch (e) {
+    // 🚨 જો કોઈ એરર આવશે તો બ્લેક સ્ક્રીનની જગ્યાએ લાલ અક્ષરમાં એરર બતાવશે!
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              "અરેરે! કંઈક ભૂલ છે:\n\n$e", 
+              style: const TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
 
 class MyStaffApp extends StatelessWidget {
