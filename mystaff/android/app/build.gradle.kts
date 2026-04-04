@@ -11,9 +11,9 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        isCoreLibraryDesugaringEnabled = true  // 👈 Kotlin માટે આ રીતે લખાય 
-        sourceCompatibility = JavaVersion.VERSION_1_8 // 👈 અહી '=' લગાડવું પડે 
-        targetCompatibility = JavaVersion.VERSION_1_8 // 👈 અહી '=' લગાડવું પડે
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
@@ -45,5 +45,6 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3") // 👈 Kotlin માં કૌંસ () અને ડબલ ક્વોટ "" આવે
+    // 👇 અહી મેં 2.0.3 ની જગ્યાએ 2.1.4 કરી દીધું છે!
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4") 
 }
