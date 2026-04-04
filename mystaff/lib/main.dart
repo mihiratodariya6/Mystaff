@@ -3,18 +3,24 @@ import 'package:firebase_core/firebase_core.dart';
 import 'notification_service.dart'; 
 import 'splash_screen.dart';
 
+// 👇 આ નવી લાઈન આપણે ઉમેરી (ફાયરબેઝનું સરનામું ઈમ્પોર્ટ કરવા)
+import 'firebase_options.dart'; 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    // 🔥 ફાયરબેઝ અને નોટિફિકેશન ચાલુ કરો
-    await Firebase.initializeApp();
+    // 🔥 ફાયરબેઝને સાચું સરનામું (options) આપીને ચાલુ કરો
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform, // 👈 આ નાખવું સૌથી જરૂરી હતું!
+    );
+    
     await NotificationService.initialize(); 
 
     // જો બધું બરાબર હશે તો એપ ચાલુ થશે
     runApp(const MyStaffApp());
   } catch (e) {
-    // 🚨 જો કોઈ એરર આવશે તો બ્લેક સ્ક્રીનની જગ્યાએ લાલ અક્ષરમાં એરર બતાવશે!
+    // 🚨 કોઈ એરર આવશે તો લાલ અક્ષરમાં બતાવશે
     runApp(MaterialApp(
       home: Scaffold(
         body: Center(
